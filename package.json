@@ -1,0 +1,32 @@
+{
+  "name": "pumpfight",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:contracts": "hardhat test",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network chiliz-spicy",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network chiliz-mainnet"
+  },
+  "dependencies": {
+    "next": "14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ethers": "^5.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/react": "^18.2.25",
+    "@types/react-dom": "^18.2.10",
+    "typescript": "^5.2.2",
+    "hardhat": "^2.19.0",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@openzeppelin/contracts": "^4.9.0",
+    "chai": "^4.3.8"
+  }
+}
