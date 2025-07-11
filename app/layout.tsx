@@ -1,4 +1,5 @@
 import './globals.css'
+import ContextProvider from '@/context'
 
 export const metadata = {
   title: 'PumpFight - Where Sports Stars Launch Their Legacy Tokens',
@@ -13,9 +14,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div id="root">
-          {children}
-        </div>
+        <ContextProvider>
+          <div id="root">
+            {children}
+          </div>
+        </ContextProvider>
       </body>
     </html>
   )
