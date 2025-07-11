@@ -14,19 +14,23 @@
     "deploy:mainnet": "hardhat run scripts/deploy.js --network chiliz-mainnet"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.1.11",
+    "ethers": "^5.7.2",
     "next": "14.0.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "ethers": "^5.7.2"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@openzeppelin/contracts": "^4.9.0",
     "@types/node": "^20.8.0",
     "@types/react": "^18.2.25",
     "@types/react-dom": "^18.2.10",
-    "typescript": "^5.2.2",
+    "autoprefixer": "^10.4.21",
+    "chai": "^4.3.8",
     "hardhat": "^2.19.0",
-    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
-    "@openzeppelin/contracts": "^4.9.0",
-    "chai": "^4.3.8"
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.2.2"
   }
 }
