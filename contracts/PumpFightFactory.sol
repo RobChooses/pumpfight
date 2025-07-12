@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./FighterToken.sol";
 import "./FighterVault.sol";
-import "../interfaces/IVerificationRegistry.sol";
 
 /**
  * @title PumpFightFactory
@@ -43,7 +42,6 @@ contract PumpFightFactory is Ownable, ReentrancyGuard, Pausable {
     // Vesting period for creator tokens (editable by owner)
     uint256 public creatorVestingPeriod = 90 days;
     
-    IVerificationRegistry public verificationRegistry;
     address public platformTreasury;
     
     mapping(address => address[]) public fighterTokens;
@@ -60,22 +58,10 @@ contract PumpFightFactory is Ownable, ReentrancyGuard, Pausable {
     
     event ConfigUpdated(TokenConfig newConfig);
     
-    modifier onlyVerifiedFighter() {
-        require(
-            verificationRegistry.isVerifiedFighter(msg.sender),
-            "Fighter not verified"
-        );
-        _;
-    }
-    
     constructor(
-        address _verificationRegistry,
         address _platformTreasury
     ) {
-        require(_verificationRegistry != address(0), "Invalid registry address");
         require(_platformTreasury != address(0), "Invalid treasury address");
-        
-        verificationRegistry = IVerificationRegistry(_verificationRegistry);
         platformTreasury = _platformTreasury;
     }
     
@@ -87,14 +73,10 @@ contract PumpFightFactory is Ownable, ReentrancyGuard, Pausable {
         string calldata tokenSymbol,
         string calldata description,
         string calldata imageUrl
-    ) external payable onlyVerifiedFighter nonReentrant whenNotPaused {
+    ) external payable nonReentrant whenNotPaused {
         require(msg.value >= creationFee, "Insufficient creation fee");
         require(bytes(tokenName).length > 0, "Token name required");
         require(bytes(tokenSymbol).length > 0, "Token symbol required");
-        
-        // Get fighter profile
-        IVerificationRegistry.FighterProfile memory profile = 
-            verificationRegistry.getFighterProfile(msg.sender);
         
         // Create vault first
         FighterVault vault = new FighterVault(
@@ -135,7 +117,7 @@ contract PumpFightFactory is Ownable, ReentrancyGuard, Pausable {
             address(token),
             msg.sender,
             address(vault),
-            profile.name,
+            tokenName, // Use token name instead of profile name
             block.timestamp
         );
     }
@@ -170,13 +152,6 @@ contract PumpFightFactory is Ownable, ReentrancyGuard, Pausable {
         platformTreasury = newTreasury;
     }
     
-    /**
-     * @dev Update verification registry
-     */
-    function updateVerificationRegistry(address newRegistry) external onlyOwner {
-        require(newRegistry != address(0), "Invalid registry address");
-        verificationRegistry = IVerificationRegistry(newRegistry);
-    }
     
     /**
      * @dev Update creation fee

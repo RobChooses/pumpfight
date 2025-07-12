@@ -46,6 +46,12 @@ export function Navbar() {
               Create Token
             </a>
             <a 
+              href="/simple-token" 
+              className="text-gray-300 hover:text-white transition-colors font-medium"
+            >
+              Simple Token
+            </a>
+            <a 
               href="/tokens" 
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
@@ -86,6 +92,7 @@ export function Navbar() {
             <div className="flex space-x-4">
               <a href="/" className="text-gray-300 hover:text-white text-sm">Home</a>
               <a href="/create" className="text-gray-300 hover:text-white text-sm">Create</a>
+              <a href="/simple-token" className="text-gray-300 hover:text-white text-sm">Simple</a>
               <a href="/tokens" className="text-gray-300 hover:text-white text-sm">Browse</a>
             </div>
           </div>
