@@ -22,6 +22,7 @@ export default function CreatePage() {
             </p>
           </div>
 
+
           <CreateFighterTokenForm />
         </div>
 

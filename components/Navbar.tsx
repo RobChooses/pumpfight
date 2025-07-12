@@ -1,82 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAppKit, useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react'
-import { ChainToggle } from './ChainToggle'
-import { WalletConnect } from './WalletConnect'
-
-interface NetworkInfo {
-  chainId: number
-  name: string
-  symbol: string
-  rpcUrl: string
-}
-
-const NETWORKS: { [key: number]: NetworkInfo } = {
-  88888: {
-    chainId: 88888,
-    name: 'Chiliz Mainnet',
-    symbol: 'CHZ',
-    rpcUrl: 'https://rpc.chiliz.com/'
-  },
-  88882: {
-    chainId: 88882,
-    name: 'Chiliz Spicy Testnet',
-    symbol: 'CHZ',
-    rpcUrl: 'https://spicy-rpc.chiliz.com/'
-  }
-}
+import { usePrivy } from '@privy-io/react-auth'
+import WalletConnectButton from './WalletConnectButton'
+import CHZBalance from './CHZBalance'
+import NetworkToggle from './NetworkToggle'
 
 export function Navbar() {
-  const { open } = useAppKit()
-  const { address, isConnected } = useAppKitAccount()
-  const { chainId, switchNetwork } = useAppKitNetwork()
-  const [balance, setBalance] = useState<string>('0')
+  const [isClient, setIsClient] = useState(false)
+  const { authenticated, user } = usePrivy()
 
-  // Get current network info
-  const currentNetwork = chainId ? NETWORKS[chainId] : null
-
-  // Update balance when network or address changes
+  // Initialize client-side only
   useEffect(() => {
-    if (isConnected && address && currentNetwork) {
-      updateBalance()
-    }
-  }, [isConnected, address, currentNetwork, chainId])
-
-  const updateBalance = async () => {
-    try {
-      if (!address || !window.ethereum) return
-      
-      const { ethers } = await import('ethers')
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
-      const balance = await provider.getBalance(address)
-      setBalance(parseFloat(ethers.utils.formatEther(balance)).toFixed(4))
-    } catch (error) {
-      console.error('Error updating balance:', error)
-      setBalance('0')
-    }
-  }
-
-  const switchToNetwork = async (targetChainId: number) => {
-    try {
-      await switchNetwork(targetChainId)
-    } catch (error) {
-      console.error('Error switching network:', error)
-    }
-  }
+    setIsClient(true)
+  }, [])
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
-  }
-
-  const getNetworkColor = () => {
-    if (!chainId) return 'bg-gray-600'
-    
-    switch (chainId) {
-      case 88888: return 'bg-green-600' // Mainnet - Green
-      case 88882: return 'bg-orange-600' // Testnet - Orange
-      default: return 'bg-red-600' // Unknown - Red
-    }
   }
 
   return (
@@ -115,32 +55,15 @@ export function Navbar() {
 
           {/* Right side - Wallet & Network Info */}
           <div className="flex items-center space-x-4">
-            {/* Chain Toggle */}
-            {isConnected && (
-              <ChainToggle 
-                currentChainId={chainId || 88882}
-                onSwitchNetwork={switchToNetwork}
-              />
-            )}
+            {/* Network Toggle - Show when authenticated */}
+            {isClient && <NetworkToggle />}
 
-            {/* Network & Balance Info */}
-            {isConnected && currentNetwork && (
-              <div className="hidden sm:flex items-center space-x-3">
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${getNetworkColor()}`}></div>
-                  <span className="text-sm text-gray-300">
-                    {currentNetwork.name}
-                  </span>
-                </div>
-                <div className="text-sm text-white font-medium">
-                  {balance} {currentNetwork.symbol}
-                </div>
-              </div>
-            )}
+            {/* CHZ Balance - Show when authenticated */}
+            {isClient && <CHZBalance />}
 
             {/* Wallet Connection */}
             <div className="wallet-connect-wrapper">
-              <WalletConnect />
+              <WalletConnectButton />
             </div>
           </div>
         </div>
@@ -148,21 +71,15 @@ export function Navbar() {
         {/* Mobile Navigation */}
         <div className="md:hidden border-t border-gray-700 py-3">
           <div className="flex flex-col space-y-2">
-            {isConnected && currentNetwork && (
+            {authenticated && user?.wallet?.address && (
               <div className="flex items-center justify-between text-sm">
+                <div className="text-gray-300">
+                  {formatAddress(user.wallet.address)}
+                </div>
                 <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${getNetworkColor()}`}></div>
-                  <span className="text-gray-300">{currentNetwork.name}</span>
+                  <NetworkToggle />
+                  <CHZBalance />
                 </div>
-                <div className="text-white font-medium">
-                  {balance} {currentNetwork.symbol}
-                </div>
-              </div>
-            )}
-            
-            {isConnected && address && (
-              <div className="text-sm text-gray-300">
-                {formatAddress(address)}
               </div>
             )}
             
