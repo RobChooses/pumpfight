@@ -1,110 +1,58 @@
 const hre = require("hardhat");
+require("dotenv").config();
+require("dotenv").config({ path: ".env.local" });
+
+console.log('rocess.env.PRIVATE_KEY: ', process.env.PRIVATE_KEY);
 
 async function main() {
   console.log("🚀 Starting PumpFight deployment to", hre.network.name);
+
+  const signers = await hre.ethers.getSigners();
+  console.log("Available signers:", signers.length);
   
-  const [deployer] = await hre.ethers.getSigners();
+  if (signers.length === 0) {
+    throw new Error("No signers available. Check your private key configuration.");
+  }
+  
+  const [deployer] = signers;
   console.log("Deploying contracts with account:", deployer.address);
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  // Deploy VerificationRegistry first
-  console.log("\n📋 Deploying VerificationRegistry...");
-  const VerificationRegistry = await hre.ethers.getContractFactory("VerificationRegistry");
-  const verificationRegistry = await VerificationRegistry.deploy();
-  await verificationRegistry.deployed();
-  console.log("✅ VerificationRegistry deployed to:", verificationRegistry.address);
+  // // Deploy VerificationRegistry first
+  // console.log("\n📋 Deploying VerificationRegistry...");
+  // const VerificationRegistry = await hre.ethers.getContractFactory("VerificationRegistry");
+  // const verificationRegistry = await VerificationRegistry.deploy();
+  // await verificationRegistry.deployed();
+  // console.log("✅ VerificationRegistry deployed to:", verificationRegistry.address);
 
   // Deploy PumpFightFactory
   console.log("\n🏭 Deploying PumpFightFactory...");
   const PumpFightFactory = await hre.ethers.getContractFactory("PumpFightFactory");
   const factory = await PumpFightFactory.deploy(
-    verificationRegistry.address,
-    deployer.address // Use deployer as initial platform treasury
+    // verificationRegistry.address,
+    process.env.NEXT_PUBLIC_VERIFICATION_REGISTRY_ADDRESS,
+    deployer.address // Use deployer address as platform treasury
   );
   await factory.deployed();
   console.log("✅ PumpFightFactory deployed to:", factory.address);
 
-  // Verify contracts on block explorer if not on local network
-  if (hre.network.name !== "hardhat" && hre.network.name !== "localhost") {
-    console.log("\n🔍 Waiting for block confirmations...");
-    await verificationRegistry.deployTransaction.wait(6);
-    await factory.deployTransaction.wait(6);
-
-    console.log("\n🔍 Verifying contracts on block explorer...");
-    
-    try {
-      await hre.run("verify:verify", {
-        address: verificationRegistry.address,
-        constructorArguments: [],
-      });
-      console.log("✅ VerificationRegistry verified");
-    } catch (error) {
-      console.log("❌ VerificationRegistry verification failed:", error.message);
-    }
-
-    try {
-      await hre.run("verify:verify", {
-        address: factory.address,
-        constructorArguments: [verificationRegistry.address, deployer.address],
-      });
-      console.log("✅ PumpFightFactory verified");
-    } catch (error) {
-      console.log("❌ PumpFightFactory verification failed:", error.message);
-    }
-  }
-
-  // Save deployment addresses
-  const deployments = {
-    network: hre.network.name,
-    chainId: hre.network.config.chainId,
-    verificationRegistry: verificationRegistry.address,
-    factory: factory.address,
-    deployer: deployer.address,
-    deployedAt: new Date().toISOString(),
-  };
-
+  // Save addresses to environment variables
+  console.log("\n📝 Adding contract addresses to .env.local...");
   const fs = require("fs");
-  const path = require("path");
-  
-  // Create deployments directory if it doesn't exist
-  const deploymentsDir = path.join(__dirname, "..", "deployments");
-  if (!fs.existsSync(deploymentsDir)) {
-    fs.mkdirSync(deploymentsDir);
-  }
-
-  // Save deployment info
-  fs.writeFileSync(
-    path.join(deploymentsDir, `${hre.network.name}.json`),
-    JSON.stringify(deployments, null, 2)
+  let envContent = fs.readFileSync(".env.local", "utf8");
+  envContent = envContent.replace(
+    /NEXT_PUBLIC_FACTORY_ADDRESS=.*/,
+    `NEXT_PUBLIC_FACTORY_ADDRESS=${factory.address}`
   );
-
-  console.log("\n📄 Deployment Summary:");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`Network: ${hre.network.name} (Chain ID: ${hre.network.config.chainId})`);
-  console.log(`VerificationRegistry: ${verificationRegistry.address}`);
-  console.log(`PumpFightFactory: ${factory.address}`);
-  console.log(`Platform Treasury: ${deployer.address}`);
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  
-  console.log("\n✅ Deployment completed successfully!");
-  
-  // Add environment variables instructions
-  console.log("\n📝 Add these to your .env file:");
-  console.log(`NEXT_PUBLIC_VERIFICATION_REGISTRY_ADDRESS=${verificationRegistry.address}`);
-  console.log(`NEXT_PUBLIC_FACTORY_ADDRESS=${factory.address}`);
-  
-  if (hre.network.name === "chiliz-spicy") {
-    console.log("\n🌶️  Chiliz Spicy Testnet Block Explorer:");
-    console.log(`https://spicy-blockscout.chiliz.com/address/${factory.address}`);
-  } else if (hre.network.name === "chiliz-mainnet") {
-    console.log("\n🔥 Chiliz Mainnet Block Explorer:");
-    console.log(`https://blockscout.chiliz.com/address/${factory.address}`);
-  }
+  // envContent = envContent.replace(
+  //   /NEXT_PUBLIC_VERIFICATION_REGISTRY_ADDRESS=.*/,
+  //   `NEXT_PUBLIC_VERIFICATION_REGISTRY_ADDRESS=${verificationRegistry.address}`
+  // );
+  // fs.writeFileSync(".env.local", envContent);
+  // console.log("✅ .env.local updated with contract addresses");
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error("❌ Deployment failed:", error);
-    process.exit(1);
-  });
+main().catch((error) => {
+  console.error("❌ Deployment failed:", error);
+  process.exitCode = 1;
+});

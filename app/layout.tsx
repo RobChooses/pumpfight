@@ -1,5 +1,6 @@
 import './globals.css'
 import ContextProvider from '@/context'
+import { Navbar } from '@/components/Navbar'
 
 export const metadata = {
   title: 'PumpFight - Where Sports Stars Launch Their Legacy Tokens',
@@ -16,6 +17,7 @@ export default function RootLayout({
       <body>
         <ContextProvider>
           <div id="root">
+            <Navbar />
             {children}
           </div>
         </ContextProvider>

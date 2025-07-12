@@ -39,30 +39,33 @@ body {
 }
 
 .octagon-wallet-button appkit-button {
-  --w3m-accent: #8b5cf6 !important;
-  --w3m-color-mix: #1da1f2 !important;
+  --w3m-accent: #d20a11 !important;
+  --w3m-color-mix: #ff6b35 !important;
   --w3m-color-mix-strength: 20 !important;
-  --w3m-border-radius-master: 12px !important;
+  --w3m-border-radius-master: 8px !important;
 }
 
 .octagon-wallet-button appkit-button::part(button) {
-  background: linear-gradient(135deg, #8b5cf6, #1da1f2) !important;
-  border: 2px solid rgba(255, 255, 255, 0.2) !important;
-  font-weight: 700 !important;
-  font-size: 18px !important;
-  padding: 16px 40px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 1px !important;
+  background: linear-gradient(135deg, #d20a11, #ff6b35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  padding: 8px 16px !important;
+  text-transform: none !important;
+  letter-spacing: 0.5px !important;
   transition: all 0.2s ease !important;
-  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(210, 10, 17, 0.3) !important;
+  min-height: 36px !important;
 }
 
 .octagon-wallet-button appkit-button::part(button):hover {
-  transform: scale(1.05) !important;
-  box-shadow: 0 12px 35px rgba(139, 92, 246, 0.5) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(210, 10, 17, 0.4) !important;
 }
 
-.octagon-wallet-button appkit-button::part(button):before {
-  content: "🚀 ENTER THE OCTAGON 🚀" !important;
-  display: block !important;
+/* Navbar specific styling - smaller button */
+.wallet-connect-wrapper appkit-button::part(button) {
+  font-size: 13px !important;
+  padding: 6px 12px !important;
+  min-height: 32px !important;
 }
