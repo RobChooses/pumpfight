@@ -22,6 +22,14 @@ export default function CreatePage() {
             </p>
           </div>
 
+          {/* Wallet Connection Notice */}
+          <div className="bg-yellow-900/20 border border-yellow-500 rounded-lg p-6 mb-8">
+            <h3 className="text-yellow-400 font-bold text-lg mb-2">⚠️ Wallet Required</h3>
+            <p className="text-yellow-300">
+              You need to connect a wallet to create fighter tokens. Wallet connection functionality will be available soon.
+            </p>
+          </div>
+
           <CreateFighterTokenForm />
         </div>
 

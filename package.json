@@ -14,7 +14,6 @@
     "deploy:mainnet": "hardhat run scripts/deploy.js --network chiliz-mainnet"
   },
   "dependencies": {
-    "@reown/appkit": "^1.7.13",
     "@tailwindcss/postcss": "^4.1.11",
     "dotenv": "^17.2.0",
     "ethers": "^5.7.2",
