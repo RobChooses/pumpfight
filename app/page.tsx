@@ -1,5 +1,3 @@
-import { WalletConnect } from '@/components/WalletConnect'
-
 export default function Home() {
   return (
     <div className="min-h-screen bg-dark-bg">
@@ -18,10 +16,19 @@ export default function Home() {
             <p className="mt-6 text-xl leading-8 text-white/80 max-w-3xl mx-auto">
               The ultimate token launchpad for combat sports legends. Trade fighter tokens, back your champions, and join the meme revolution of sports finance on Chiliz Chain.
             </p>
-            <div className="mt-10 flex justify-center">
-              <div className="octagon-wallet-button">
-                <WalletConnect />
-              </div>
+            <div className="mt-10 flex justify-center gap-4">
+              <a 
+                href="/create"
+                className="px-8 py-4 bg-gradient-to-r from-fight-gold to-energy-green text-black font-black rounded-lg hover:opacity-90 transition-opacity shadow-lg"
+              >
+                🥊 CREATE TOKEN
+              </a>
+              <a 
+                href="/tokens"
+                className="px-8 py-4 bg-gradient-to-r from-meme-purple to-social-blue text-white font-black rounded-lg hover:opacity-90 transition-opacity shadow-lg"
+              >
+                🚀 BROWSE TOKENS
+              </a>
             </div>
           </div>
         </div>
