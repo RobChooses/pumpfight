@@ -37,11 +37,11 @@ contract PumpFightFactory is Ownable, ReentrancyGuard, Pausable {
         maxSupply: 10000000 * 10**18    // 10M max supply
     });
     
-    // Creation fee to prevent spam
-    uint256 public constant CREATION_FEE = 100 * 10**18; // 100 CHZ
+    // Creation fee to prevent spam (editable by owner)
+    uint256 public creationFee = 1 * 10**18; // 1 CHZ
     
-    // Vesting period for creator tokens
-    uint256 public constant CREATOR_VESTING_PERIOD = 90 days;
+    // Vesting period for creator tokens (editable by owner)
+    uint256 public creatorVestingPeriod = 90 days;
     
     IVerificationRegistry public verificationRegistry;
     address public platformTreasury;
@@ -88,7 +88,7 @@ contract PumpFightFactory is Ownable, ReentrancyGuard, Pausable {
         string calldata description,
         string calldata imageUrl
     ) external payable onlyVerifiedFighter nonReentrant whenNotPaused {
-        require(msg.value >= CREATION_FEE, "Insufficient creation fee");
+        require(msg.value >= creationFee, "Insufficient creation fee");
         require(bytes(tokenName).length > 0, "Token name required");
         require(bytes(tokenSymbol).length > 0, "Token symbol required");
         
@@ -158,14 +158,6 @@ contract PumpFightFactory is Ownable, ReentrancyGuard, Pausable {
      * @dev Update default token configuration
      */
     function updateDefaultConfig(TokenConfig calldata newConfig) external onlyOwner {
-        require(newConfig.initialPrice > 0, "Invalid initial price");
-        require(newConfig.stepMultiplier > 1, "Invalid step multiplier");
-        require(newConfig.stepSize > 0, "Invalid step size");
-        require(newConfig.graduationTarget > 0, "Invalid graduation target");
-        require(newConfig.creatorShare <= 1000, "Creator share too high"); // Max 10%
-        require(newConfig.platformFee <= 500, "Platform fee too high"); // Max 5%
-        require(newConfig.maxSupply > newConfig.graduationTarget, "Invalid max supply");
-        
         defaultConfig = newConfig;
         emit ConfigUpdated(newConfig);
     }
@@ -184,6 +176,77 @@ contract PumpFightFactory is Ownable, ReentrancyGuard, Pausable {
     function updateVerificationRegistry(address newRegistry) external onlyOwner {
         require(newRegistry != address(0), "Invalid registry address");
         verificationRegistry = IVerificationRegistry(newRegistry);
+    }
+    
+    /**
+     * @dev Update creation fee
+     */
+    function updateCreationFee(uint256 newFee) external onlyOwner {
+        require(newFee > 0, "Fee must be greater than 0");
+        creationFee = newFee;
+    }
+    
+    /**
+     * @dev Update creator vesting period
+     */
+    function updateCreatorVestingPeriod(uint256 newPeriod) external onlyOwner {
+        require(newPeriod > 0, "Vesting period must be greater than 0");
+        creatorVestingPeriod = newPeriod;
+    }
+    
+    /**
+     * @dev Update initial price
+     */
+    function updateInitialPrice(uint256 newPrice) external onlyOwner {
+        require(newPrice > 0, "Initial price must be greater than 0");
+        defaultConfig.initialPrice = newPrice;
+    }
+    
+    /**
+     * @dev Update step multiplier
+     */
+    function updateStepMultiplier(uint256 newMultiplier) external onlyOwner {
+        require(newMultiplier > 1, "Step multiplier must be greater than 1");
+        defaultConfig.stepMultiplier = newMultiplier;
+    }
+    
+    /**
+     * @dev Update step size
+     */
+    function updateStepSize(uint256 newSize) external onlyOwner {
+        require(newSize > 0, "Step size must be greater than 0");
+        defaultConfig.stepSize = newSize;
+    }
+    
+    /**
+     * @dev Update graduation target
+     */
+    function updateGraduationTarget(uint256 newTarget) external onlyOwner {
+        require(newTarget > 0, "Graduation target must be greater than 0");
+        require(newTarget < defaultConfig.maxSupply, "Target must be less than max supply");
+        defaultConfig.graduationTarget = newTarget;
+    }
+    
+    /**
+     * @dev Update creator share
+     */
+    function updateCreatorShare(uint256 newShare) external onlyOwner {
+        defaultConfig.creatorShare = newShare;
+    }
+    
+    /**
+     * @dev Update platform fee
+     */
+    function updatePlatformFee(uint256 newFee) external onlyOwner {
+        defaultConfig.platformFee = newFee;
+    }
+    
+    /**
+     * @dev Update max supply
+     */
+    function updateMaxSupply(uint256 newSupply) external onlyOwner {
+        require(newSupply > defaultConfig.graduationTarget, "Max supply must be greater than graduation target");
+        defaultConfig.maxSupply = newSupply;
     }
     
     /**

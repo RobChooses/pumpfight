@@ -16,6 +16,7 @@
   "dependencies": {
     "@reown/appkit": "^1.7.13",
     "@tailwindcss/postcss": "^4.1.11",
+    "dotenv": "^17.2.0",
     "ethers": "^5.7.2",
     "next": "14.0.0",
     "react": "^18.2.0",

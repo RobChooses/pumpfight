@@ -1,9 +1,7 @@
-import * as dotenv from "dotenv";
-
-dotenv.config();
+require("dotenv").config();
+require("dotenv").config({ path: ".env.local" });
 
 require("@nomicfoundation/hardhat-toolbox");
-console.log('process.env.PRIVATE_KEY :', process.env.PRIVATE_KEY )
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
