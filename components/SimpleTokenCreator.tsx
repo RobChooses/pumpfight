@@ -37,6 +37,16 @@ export default function SimpleTokenCreator() {
     transport: http(),
   });
 
+  // URL validation helper
+  const isValidUrl = (string: string): boolean => {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
   // Fetch bonding curve state for the current token
   const fetchBondingCurveState = async (tokenAddress: string) => {
     if (!tokenAddress || tokenAddress === 'created') return;
@@ -46,6 +56,7 @@ export default function SimpleTokenCreator() {
         address: tokenAddress as `0x${string}`,
         abi: SimpleCAP20TokenABI as any,
         functionName: 'getBondingCurveState',
+        args: [],
       }) as [bigint, bigint, bigint, bigint];
 
       setBondingCurveState({
@@ -123,19 +134,27 @@ export default function SimpleTokenCreator() {
 
     setIsCreating(true);
     try {
-      // Use Privy wallet provider directly
-      if (wallets.length === 0) {
-        throw new Error('No Privy wallet found');
+      // Find the wallet that matches the authenticated user's wallet
+      const userWallet = wallets.find(w => w.address === user.wallet.address);
+      if (!userWallet) {
+        throw new Error('Authenticated wallet not found in Privy wallets');
       }
 
-      const wallet = wallets[0];
-      const provider = await wallet.getEthereumProvider();
+      const provider = await userWallet.getEthereumProvider();
+      
+      // Check balance before attempting transaction
+      const balance = await publicClient.getBalance({
+        address: user.wallet.address as `0x${string}`,
+      });
       
       console.log('🔧 Creating wallet client with:', {
         chainName: currentChain.name,
         chainId: currentChain.id,
-        walletType: wallet.walletClientType,
-        launchpadAddress
+        walletType: userWallet.walletClientType,
+        launchpadAddress,
+        userWalletAddress: user.wallet.address,
+        walletAddress: userWallet.address,
+        balance: formatEther(balance)
       });
       
       const walletClient = createWalletClient({
@@ -245,12 +264,13 @@ export default function SimpleTokenCreator() {
 
     setIsMinting(true);
     try {
-      if (wallets.length === 0) {
-        throw new Error('No Privy wallet found');
+      // Find the wallet that matches the authenticated user's wallet
+      const userWallet = wallets.find(w => w.address === user.wallet.address);
+      if (!userWallet) {
+        throw new Error('Authenticated wallet not found in Privy wallets');
       }
 
-      const wallet = wallets[0];
-      const provider = await wallet.getEthereumProvider();
+      const provider = await userWallet.getEthereumProvider();
       
       const walletClient = createWalletClient({
         chain: currentChain,
