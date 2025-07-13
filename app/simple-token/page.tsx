@@ -26,9 +26,9 @@ export default function SimpleTokenPage() {
           <div className="bg-card-dark border border-gray-700 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-3">📋 Features</h3>
             <ul className="text-gray-300 space-y-2">
-              <li>• No creation fees - completely free</li>
+              <li>• 1 CHZ creation fee</li>
               <li>• Automatic bonding curve pricing</li>
-              <li>• Starts at 0.001 CHZ per token</li>
+              <li>• Starts at 0.0005 CHZ per token</li>
               <li>• Price increases with demand</li>
               <li>• Fair price discovery mechanism</li>
             </ul>
@@ -38,7 +38,7 @@ export default function SimpleTokenPage() {
             <h3 className="text-xl font-bold text-white mb-3">⚡ Bonding Curve</h3>
             <ul className="text-gray-300 space-y-2">
               <li>• Step-based price increases</li>
-              <li>• +0.0001 CHZ every 1,000 tokens</li>
+              <li>• Price doubles every 50,000 tokens</li>
               <li>• Early supporters get best prices</li>
               <li>• All revenue to token creator</li>
               <li>• Transparent pricing algorithm</li>

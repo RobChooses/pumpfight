@@ -21,13 +21,13 @@ export default function Home() {
                 href="/create"
                 className="px-6 py-3 bg-gradient-to-r from-fight-gold to-energy-green text-black font-black rounded-lg hover:opacity-90 transition-opacity shadow-lg"
               >
-                🥊 CREATE TOKEN
+                🥊 LAUNCH COIN&nbsp;
               </a>
               <a 
                 href="/tokens"
                 className="px-6 py-3 bg-gradient-to-r from-meme-purple to-social-blue text-white font-black rounded-lg hover:opacity-90 transition-opacity shadow-lg"
               >
-                🚀 BROWSE TOKENS
+                🚀 BROWSE COINS&nbsp;
               </a>
             </div>
           </div>

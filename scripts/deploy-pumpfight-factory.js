@@ -29,7 +29,6 @@ async function main() {
   console.log("\n🏭 Deploying PumpFightFactory...");
   const PumpFightFactory = await hre.ethers.getContractFactory("PumpFightFactory");
   const factory = await PumpFightFactory.deploy(
-    verificationRegistryAddress,
     deployer.address // Use deployer address as platform treasury
   );
   await factory.deployed();

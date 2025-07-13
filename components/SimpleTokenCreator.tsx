@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther } from 'viem';
 import { chiliz, spicy } from 'viem/chains';
-import SimpleTokenLaunchpadABI from '@/lib/abis/SimpleTokenLaunchpadV3.json';
+import PumpFightFactoryABI from '@/lib/abis/PumpFightFactory.json';
+import FighterTokenABI from '@/lib/abis/FighterToken.json';
 import SimpleCAP20TokenABI from '@/lib/abis/SimpleCAP20TokenV3.json';
 import { useNetwork } from './NetworkContext';
 
@@ -13,7 +14,7 @@ import { useNetwork } from './NetworkContext';
 export default function SimpleTokenCreator() {
   const { ready, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
-  const { currentChain, isTestnet } = useNetwork();
+  const { currentChain } = useNetwork();
   const [tokenName, setTokenName] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [description, setDescription] = useState('');
@@ -30,7 +31,7 @@ export default function SimpleTokenCreator() {
   } | null>(null);
   const [mintCost, setMintCost] = useState<string>('0');
   
-  const launchpadAddress = process.env.NEXT_PUBLIC_SIMPLE_LAUNCHPAD_V3_ADDRESS as `0x${string}`;
+  const factoryAddress = process.env.NEXT_PUBLIC_FACTORY_ADDRESS as `0x${string}`;
 
   const publicClient = createPublicClient({
     chain: currentChain,
@@ -52,12 +53,37 @@ export default function SimpleTokenCreator() {
     if (!tokenAddress || tokenAddress === 'created') return;
 
     try {
-      const [currentPrice, tokensSold, currentStep, nextStepAt] = await publicClient.readContract({
-        address: tokenAddress as `0x${string}`,
-        abi: SimpleCAP20TokenABI as any,
-        functionName: 'getBondingCurveState',
-        args: [],
-      }) as [bigint, bigint, bigint, bigint];
+      // Check if this is a FighterToken
+      const storedTokens = JSON.parse(localStorage.getItem('createdTokens') || '[]');
+      const tokenData = storedTokens.find((t: any) => t.address.toLowerCase() === tokenAddress.toLowerCase());
+      const isFighterToken = tokenData?.vaultAddress ? true : false;
+      
+      let currentPrice, tokensSold, currentStep, nextStepAt;
+      
+      if (isFighterToken) {
+        // FighterToken: use bondingCurve getter (currentPrice, tokensSold, currentStep, reserveBalance)
+        const [price, sold, step] = await publicClient.readContract({
+          address: tokenAddress as `0x${string}`,
+          abi: FighterTokenABI as any,
+          functionName: 'bondingCurve',
+          args: [],
+        }) as [bigint, bigint, bigint, bigint];
+        
+        currentPrice = price;
+        tokensSold = sold;
+        currentStep = step;
+        nextStepAt = BigInt(0); // FighterToken doesn't have nextStepAt, use 0
+      } else {
+        // SimpleCAP20Token: use getBondingCurveState
+        const result = await publicClient.readContract({
+          address: tokenAddress as `0x${string}`,
+          abi: SimpleCAP20TokenABI as any,
+          functionName: 'getBondingCurveState',
+          args: [],
+        }) as [bigint, bigint, bigint, bigint];
+        
+        [currentPrice, tokensSold, currentStep, nextStepAt] = result;
+      }
 
       setBondingCurveState({
         currentPrice: formatEther(currentPrice),
@@ -67,6 +93,7 @@ export default function SimpleTokenCreator() {
       });
 
       console.log('📊 Bonding curve state:', {
+        type: isFighterToken ? 'FighterToken' : 'SimpleCAP20Token',
         currentPrice: formatEther(currentPrice),
         tokensSold: formatEther(tokensSold),
         currentStep: currentStep.toString(),
@@ -85,13 +112,36 @@ export default function SimpleTokenCreator() {
     }
 
     try {
-      const tokenAmount = parseEther(amount);
-      const cost = await publicClient.readContract({
-        address: tokenAddress as `0x${string}`,
-        abi: SimpleCAP20TokenABI as any,
-        functionName: 'calculateCHZFromTokens',
-        args: [tokenAmount],
-      }) as bigint;
+      // Check if this is a FighterToken
+      const storedTokens = JSON.parse(localStorage.getItem('createdTokens') || '[]');
+      const tokenData = storedTokens.find((t: any) => t.address.toLowerCase() === tokenAddress.toLowerCase());
+      const isFighterToken = tokenData?.vaultAddress ? true : false;
+      
+      let cost;
+      if (isFighterToken) {
+        // For FighterToken: amount is CHZ to spend, calculate tokens
+        const chzAmount = parseEther(amount);
+        cost = chzAmount;
+        
+        const expectedTokens = await publicClient.readContract({
+          address: tokenAddress as `0x${string}`,
+          abi: FighterTokenABI as any,
+          functionName: 'calculateTokensFromCHZ',
+          args: [chzAmount],
+        }) as bigint;
+        
+        // Update display to show expected tokens
+        console.log(`Spending ${amount} CHZ to get ~${formatEther(expectedTokens)} tokens`);
+      } else {
+        // For SimpleCAP20Token: amount is tokens, calculate CHZ cost
+        const tokenAmount = parseEther(amount);
+        cost = await publicClient.readContract({
+          address: tokenAddress as `0x${string}`,
+          abi: FighterTokenABI as any,
+          functionName: 'calculateCHZFromTokens',
+          args: [tokenAmount],
+        }) as bigint;
+      }
 
       const costInCHZ = formatEther(cost);
       setMintCost(costInCHZ);
@@ -127,8 +177,18 @@ export default function SimpleTokenCreator() {
       return;
     }
 
-    if (!launchpadAddress) {
-      alert('Simple launchpad not deployed yet');
+    if (!factoryAddress) {
+      alert('PumpFight factory not deployed yet');
+      return;
+    }
+
+    if (!description.trim()) {
+      alert('Please enter a fighter description');
+      return;
+    }
+
+    if (!imageUrl.trim() || !isValidUrl(imageUrl)) {
+      alert('Please enter a valid fighter image URL');
       return;
     }
 
@@ -151,7 +211,7 @@ export default function SimpleTokenCreator() {
         chainName: currentChain.name,
         chainId: currentChain.id,
         walletType: userWallet.walletClientType,
-        launchpadAddress,
+        factoryAddress,
         userWalletAddress: user.wallet.address,
         walletAddress: userWallet.address,
         balance: formatEther(balance)
@@ -162,11 +222,20 @@ export default function SimpleTokenCreator() {
         transport: custom(provider),
       });
 
+      // Get creation fee
+      const creationFee = await publicClient.readContract({
+        address: factoryAddress,
+        abi: PumpFightFactoryABI as any,
+        functionName: 'creationFee',
+        args: [],
+      }) as bigint;
+
       const hash = await walletClient.writeContract({
-        address: launchpadAddress,
-        abi: SimpleTokenLaunchpadABI as any,
-        functionName: 'createSimpleToken',
-        args: [tokenName, tokenSymbol],
+        address: factoryAddress,
+        abi: PumpFightFactoryABI as any,
+        functionName: 'createFighterToken',
+        args: [tokenName, tokenSymbol, description, imageUrl],
+        value: creationFee,
         account: user.wallet.address as `0x${string}`,
       });
 
@@ -176,18 +245,17 @@ export default function SimpleTokenCreator() {
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       console.log('Transaction confirmed:', receipt);
 
-      // Parse the logs to find the SimpleTokenCreated event
+      // Parse the logs to find the TokenCreated event
       const logs = await publicClient.getLogs({
-        address: launchpadAddress,
+        address: factoryAddress,
         event: {
           type: 'event',
-          name: 'SimpleTokenCreated',
+          name: 'TokenCreated',
           inputs: [
             { type: 'address', name: 'token', indexed: true },
-            { type: 'address', name: 'creator', indexed: true },
-            { type: 'string', name: 'name' },
-            { type: 'string', name: 'symbol' },
-            { type: 'uint256', name: 'initialPrice' },
+            { type: 'address', name: 'fighter', indexed: true },
+            { type: 'address', name: 'vault', indexed: true },
+            { type: 'string', name: 'fighterName' },
             { type: 'uint256', name: 'timestamp' }
           ]
         },
@@ -201,7 +269,8 @@ export default function SimpleTokenCreator() {
         console.log('📋 Log args:', logs[0].args);
         
         const tokenAddress = logs[0].args?.token;
-        console.log('📋 Extracted token address:', tokenAddress);
+        const vaultAddress = logs[0].args?.vault;
+        console.log('📋 Extracted addresses:', { tokenAddress, vaultAddress });
         
         if (tokenAddress) {
           setLastCreatedToken(tokenAddress);
@@ -211,7 +280,10 @@ export default function SimpleTokenCreator() {
             address: tokenAddress,
             name: tokenName,
             symbol: tokenSymbol,
+            description: description || '',
+            imageUrl: imageUrl || '',
             creator: user!.wallet!.address,
+            vaultAddress: vaultAddress || '', // Store vault address from event
             createdAt: new Date().toISOString(),
             transactionHash: hash,
             network: currentChain.name,
@@ -234,10 +306,10 @@ export default function SimpleTokenCreator() {
           } catch (error) {
             console.error('Error saving token to localStorage:', error);
           }
-          alert(`Token created successfully!\nToken Address: ${tokenAddress}\nTransaction: ${hash}`);
+          alert(`Fighter token created successfully!\nToken Address: ${tokenAddress}\nVault Address: ${vaultAddress}\nTransaction: ${hash}`);
         } else {
           setLastCreatedToken('created');
-          alert(`Token created successfully!\nTransaction: ${hash}\nPlease check the transaction for the token address.`);
+          alert(`Fighter token created successfully!\nTransaction: ${hash}\nPlease check the transaction for addresses.`);
         }
       } else {
         console.log('📋 No event logs found, falling back to transaction parsing');
@@ -248,6 +320,8 @@ export default function SimpleTokenCreator() {
       // Clear form
       setTokenName('');
       setTokenSymbol('');
+      setDescription('');
+      setImageUrl('');
     } catch (error) {
       console.error('Error creating token:', error);
       alert('Failed to create token. Check console for details.');
@@ -255,6 +329,7 @@ export default function SimpleTokenCreator() {
       setIsCreating(false);
     }
   };
+
 
   const mintTokens = async () => {
     if (!lastCreatedToken || !mintAmount || lastCreatedToken === 'created') {
@@ -277,17 +352,50 @@ export default function SimpleTokenCreator() {
         transport: custom(provider),
       });
 
-      const amount = parseEther(mintAmount);
-      const value = parseEther(mintCost); // Use calculated cost from bonding curve
+      // For new FighterTokens created with PumpFightFactory, use buy() function
+      // Check if this is a FighterToken by looking for stored vaultAddress
+      const storedTokens = JSON.parse(localStorage.getItem('createdTokens') || '[]');
+      const tokenData = storedTokens.find((t: any) => t.address.toLowerCase() === lastCreatedToken.toLowerCase());
+      const isFighterToken = tokenData?.vaultAddress ? true : false;
 
-      const hash = await walletClient.writeContract({
-        address: lastCreatedToken as `0x${string}`,
-        abi: SimpleCAP20TokenABI as any,
-        functionName: 'mint',
-        args: [amount],
-        value: value,
-        account: user!.wallet!.address as `0x${string}`,
-      });
+      let hash;
+      if (isFighterToken) {
+        // FighterToken: send CHZ, get tokens with slippage protection
+        const chzAmount = parseEther(mintCost);
+        
+        // Calculate expected tokens
+        const expectedTokens = await publicClient.readContract({
+          address: lastCreatedToken as `0x${string}`,
+          abi: FighterTokenABI as any,
+          functionName: 'calculateTokensFromCHZ',
+          args: [chzAmount],
+        }) as bigint;
+        
+        // Use 95% of expected for slippage protection
+        const minTokensOut = expectedTokens * BigInt(95) / BigInt(100);
+        
+        hash = await walletClient.writeContract({
+          address: lastCreatedToken as `0x${string}`,
+          abi: FighterTokenABI as any,
+          functionName: 'buy',
+          args: [minTokensOut],
+          value: chzAmount,
+          account: user!.wallet!.address as `0x${string}`,
+        });
+      } else {
+        // Legacy SimpleCAP20Token: specify token amount, pay calculated CHZ
+        const amount = parseEther(mintAmount);
+        const value = parseEther(mintCost);
+        
+        hash = await walletClient.writeContract({
+          address: lastCreatedToken as `0x${string}`,
+          abi: FighterTokenABI as any, // This should be SimpleCAP20TokenABI for legacy tokens
+          functionName: 'mint',
+          args: [amount],
+          value: value,
+          account: user!.wallet!.address as `0x${string}`,
+        });
+      }
 
       await publicClient.waitForTransactionReceipt({ hash });
       alert(`Successfully minted ${mintAmount} tokens!`);
@@ -395,16 +503,16 @@ export default function SimpleTokenCreator() {
         <h3 className="text-yellow-400 font-semibold mb-2">🚀 How It Works:</h3>
         <ul className="text-yellow-400 text-sm space-y-1">
           <li>• Create tokens with automatic bonding curve pricing</li>
-          <li>• Price starts at 0.001 CHZ per token</li>
-          <li>• Price increases by 0.0001 CHZ every 1,000 tokens sold</li>
-          <li>• Step 0: 0.001 CHZ → Step 1: 0.0011 CHZ → Step 2: 0.0012 CHZ</li>
+          <li>• Price starts at 0.0005 CHZ per token</li>
+          <li>• Price doubles every 50,000 tokens sold</li>
+          <li>• Step 1: 0.0005 CHZ → Step 2: 0.001 CHZ → Step 3: 0.002 CHZ</li>
           <li>• Fair price discovery - early supporters get better prices</li>
           <li>• All revenue goes directly to the token creator</li>
         </ul>
         <div className="mt-3 pt-3 border-t border-yellow-500/30">
           <p className="text-yellow-400 text-xs">
             <strong>Network:</strong> {currentChain.name} | 
-            <strong> Contract:</strong> {launchpadAddress ? `${launchpadAddress.slice(0, 6)}...${launchpadAddress.slice(-4)}` : 'Not deployed'}
+            <strong> Factory:</strong> {factoryAddress ? `${factoryAddress.slice(0, 6)}...${factoryAddress.slice(-4)}` : 'Not deployed'}
           </p>
         </div>
       </div>
@@ -413,13 +521,13 @@ export default function SimpleTokenCreator() {
       <div className="pt-6">
         <button
           onClick={createToken}
-          disabled={isCreating || !tokenName.trim() || !tokenSymbol.trim()}
+          disabled={isCreating || !tokenName.trim() || !tokenSymbol.trim() || !description.trim() || !imageUrl.trim()}
           className="w-full px-6 py-4 bg-gradient-to-r from-ufc-red to-electric-orange text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isCreating ? (
             <div className="flex items-center justify-center">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-              Creating Token...
+'Creating Fighter Token...'
             </div>
           ) : (
             'Create Token'
@@ -480,14 +588,16 @@ export default function SimpleTokenCreator() {
             
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Amount to Mint
+                Amount to Purchase
               </label>
               <div className="flex space-x-3">
                 <input
                   type="number"
-                  min="1"
+                  min="0.001"
+                  step="0.001"
                   value={mintAmount}
                   onChange={(e) => setMintAmount(e.target.value)}
+                  placeholder="1.0"
                   className="flex-1 px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-ufc-red focus:border-transparent"
                 />
                 <button
@@ -498,25 +608,22 @@ export default function SimpleTokenCreator() {
                   {isMinting ? (
                     <div className="flex items-center">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Minting...
+                      Buying...
                     </div>
                   ) : (
-                    'Mint'
+                    'Buy Tokens'
                   )}
                 </button>
               </div>
               {mintCost !== '0' && (
                 <div className="mt-3 bg-gray-800 rounded-lg p-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-400 text-sm">Total Cost:</span>
+                    <span className="text-gray-400 text-sm">Amount to Spend:</span>
                     <span className="text-fight-gold font-semibold">{parseFloat(mintCost).toFixed(6)} CHZ</span>
                   </div>
-                  {bondingCurveState && (
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-gray-400 text-xs">Avg Price per Token:</span>
-                      <span className="text-gray-300 text-xs">≈{(parseFloat(mintCost) / parseFloat(mintAmount)).toFixed(6)} CHZ</span>
-                    </div>
-                  )}
+                  <div className="text-gray-400 text-xs mt-1">
+                    Tokens received will vary based on current bonding curve price
+                  </div>
                 </div>
               )}
             </div>
