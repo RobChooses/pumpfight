@@ -12,10 +12,10 @@ interface IPumpFightFactory {
 }
 
 /**
- * @title FighterToken
- * @dev CAP-20 compliant fighter token with bonding curve
+ * @title FighterTokenDebug
+ * @dev Debug version of FighterToken with detailed error messages
  */
-contract FighterToken is ERC20, ICAP20, ReentrancyGuard, Pausable {
+contract FighterTokenDebug is ERC20, ICAP20, ReentrancyGuard, Pausable {
     using SafeMath for uint256;
     
     struct BondingCurve {
@@ -60,23 +60,7 @@ contract FighterToken is ERC20, ICAP20, ReentrancyGuard, Pausable {
         uint256 chzSpent
     );
     
-    event TokensSold(
-        address indexed seller,
-        uint256 amount,
-        uint256 proceeds
-    );
-    
-    event Graduated(
-        uint256 totalRaised,
-        address dexPool,
-        uint256 timestamp
-    );
-    
-    event PriceUpdated(
-        uint256 newPrice,
-        uint256 step,
-        uint256 tokensSold
-    );
+    event DebugStep(string step, uint256 value);
     
     modifier onlyFactory() {
         require(msg.sender == factory, "Only factory can call");
@@ -139,82 +123,77 @@ contract FighterToken is ERC20, ICAP20, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Buy tokens with CHZ
+     * @dev Buy tokens with CHZ (Debug version)
      */
     function buy(uint256 minTokensOut) external payable nonReentrant whenNotPaused notGraduated {
+        emit DebugStep("Started buy function", msg.value);
+        
         require(msg.value > 0, "Must send CHZ");
+        emit DebugStep("Passed msg.value check", msg.value);
         
         uint256 tokensToMint = calculateTokensFromCHZ(msg.value);
+        emit DebugStep("Calculated tokens to mint", tokensToMint);
+        
         require(tokensToMint >= minTokensOut, "Slippage protection failed");
+        emit DebugStep("Passed slippage check", tokensToMint);
+        
         require(bondingCurve.tokensSold.add(tokensToMint) <= config.maxSupply, "Exceeds max supply");
+        emit DebugStep("Passed max supply check", bondingCurve.tokensSold.add(tokensToMint));
         
         // Calculate and distribute fees first
         uint256 fighterFee = msg.value.mul(config.creatorShare).div(10000);
         uint256 platformFee = msg.value.mul(config.platformFee).div(10000);
         uint256 reserveAmount = msg.value.sub(fighterFee).sub(platformFee);
+        emit DebugStep("Calculated fees - fighter", fighterFee);
+        emit DebugStep("Calculated fees - platform", platformFee);
+        emit DebugStep("Calculated reserve amount", reserveAmount);
         
         // Update bonding curve state with net amount (after fees)
         bondingCurve.tokensSold = bondingCurve.tokensSold.add(tokensToMint);
         bondingCurve.reserveBalance = bondingCurve.reserveBalance.add(reserveAmount);
+        emit DebugStep("Updated tokens sold", bondingCurve.tokensSold);
+        emit DebugStep("Updated reserve balance", bondingCurve.reserveBalance);
         
         // Update price if crossing step boundary
         uint256 newStep = bondingCurve.tokensSold.div(config.stepSize);
         if (newStep > bondingCurve.currentStep) {
             bondingCurve.currentStep = newStep;
             bondingCurve.currentPrice = _calculateStepPrice(newStep);
-            emit PriceUpdated(bondingCurve.currentPrice, newStep, bondingCurve.tokensSold);
+            emit DebugStep("Updated price step", newStep);
+            emit DebugStep("New price", bondingCurve.currentPrice);
         }
         
         // Mint tokens to buyer
+        emit DebugStep("About to mint tokens", tokensToMint);
         _mint(msg.sender, tokensToMint);
+        emit DebugStep("Minted tokens successfully", tokensToMint);
+        
         lastPurchaseTime[msg.sender] = block.timestamp;
+        emit DebugStep("Set purchase time", block.timestamp);
         
         // Transfer fees
         if (fighterFee > 0) {
+            emit DebugStep("About to transfer fighter fee", fighterFee);
             payable(fighterVault).transfer(fighterFee);
+            emit DebugStep("Transferred fighter fee", fighterFee);
         }
+        
         if (platformFee > 0) {
+            emit DebugStep("About to transfer platform fee", platformFee);
             payable(IPumpFightFactory(factory).platformTreasury()).transfer(platformFee);
+            emit DebugStep("Transferred platform fee", platformFee);
         }
         
         // Check for graduation
         if (bondingCurve.tokensSold >= config.graduationTarget) {
+            emit DebugStep("About to graduate", bondingCurve.tokensSold);
             _graduate();
+            emit DebugStep("Graduated successfully", bondingCurve.tokensSold);
         }
         
+        emit DebugStep("About to emit purchase event", tokensToMint);
         emit TokensPurchased(msg.sender, tokensToMint, bondingCurve.currentPrice, msg.value);
-    }
-    
-    /**
-     * @dev Sell tokens for CHZ
-     */
-    function sell(uint256 tokenAmount) external nonReentrant whenNotPaused notGraduated {
-        require(balanceOf(msg.sender) >= tokenAmount, "Insufficient balance");
-        require(tokenAmount > 0, "Amount must be greater than 0");
-        
-        // Anti-rug: Cooldown period
-        require(
-            block.timestamp >= lastPurchaseTime[msg.sender].add(SELL_COOLDOWN),
-            "Sell cooldown active"
-        );
-        
-        // Anti-rug: Max sell percentage
-        uint256 maxSellAmount = balanceOf(msg.sender).mul(MAX_SELL_PERCENTAGE).div(10000);
-        require(tokenAmount <= maxSellAmount, "Exceeds max sell percentage");
-        
-        // Calculate CHZ to return (with slippage)
-        uint256 chzToReturn = calculateCHZFromTokens(tokenAmount);
-        require(chzToReturn <= bondingCurve.reserveBalance, "Insufficient reserves");
-        
-        // Update bonding curve state
-        bondingCurve.tokensSold = bondingCurve.tokensSold.sub(tokenAmount);
-        bondingCurve.reserveBalance = bondingCurve.reserveBalance.sub(chzToReturn);
-        
-        // Burn tokens and send CHZ
-        _burn(msg.sender, tokenAmount);
-        payable(msg.sender).transfer(chzToReturn);
-        
-        emit TokensSold(msg.sender, tokenAmount, chzToReturn);
+        emit DebugStep("Buy function completed", tokensToMint);
     }
     
     /**
@@ -234,20 +213,6 @@ contract FighterToken is ERC20, ICAP20, ReentrancyGuard, Pausable {
         }
         
         return tokensToMint;
-    }
-    
-    /**
-     * @dev Calculate CHZ received for token amount (with 2% sell tax)
-     */
-    function calculateCHZFromTokens(uint256 tokenAmount) public view returns (uint256) {
-        if (tokenAmount == 0 || tokenAmount > bondingCurve.tokensSold) return 0;
-        
-        // Simple proportional calculation with sell tax
-        uint256 proportion = tokenAmount.mul(1e18).div(bondingCurve.tokensSold);
-        uint256 chzAmount = bondingCurve.reserveBalance.mul(proportion).div(1e18);
-        
-        // Apply 2% sell tax to prevent manipulation
-        return chzAmount.mul(98).div(100);
     }
     
     /**
@@ -273,11 +238,7 @@ contract FighterToken is ERC20, ICAP20, ReentrancyGuard, Pausable {
      */
     function _graduate() private {
         isGraduated = true;
-        
         // TODO: Implement DEX liquidity provision
-        // This would integrate with KayenSwap or similar Chiliz DEX
-        
-        emit Graduated(bondingCurve.reserveBalance, address(0), block.timestamp);
     }
     
     /**
@@ -285,13 +246,6 @@ contract FighterToken is ERC20, ICAP20, ReentrancyGuard, Pausable {
      */
     function getCurrentPrice() external view returns (uint256) {
         return bondingCurve.currentPrice;
-    }
-    
-    /**
-     * @dev Get bonding curve progress to graduation
-     */
-    function getGraduationProgress() external view returns (uint256, uint256) {
-        return (bondingCurve.tokensSold, config.graduationTarget);
     }
     
     // CAP-20 Implementation
@@ -320,5 +274,4 @@ contract FighterToken is ERC20, ICAP20, ReentrancyGuard, Pausable {
     function unpause() external onlyFactory {
         _unpause();
     }
-    
 }

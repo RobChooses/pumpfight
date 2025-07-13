@@ -8,7 +8,7 @@ export default function WalletConnectButton() {
   const handleConnect = () => {
     console.log('🔗 Wallet connect button clicked');
     console.log('🔍 Ready:', ready, 'Authenticated:', authenticated);
-    
+
     if (authenticated) {
       console.log('👋 Logging out...');
       logout();
@@ -28,7 +28,7 @@ export default function WalletConnectButton() {
 
   return (
     <button
-      className="px-6 py-2 bg-gradient-to-r from-ufc-red to-electric-orange text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+      className="px-8 py-3 bg-gradient-to-r from-ufc-red to-electric-orange text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
       onClick={handleConnect}
     >
       {authenticated ? "Disconnect" : "Connect Wallet"}

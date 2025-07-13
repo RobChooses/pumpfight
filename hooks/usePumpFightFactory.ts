@@ -34,8 +34,12 @@ export function usePumpFightFactory() {
     
     // Check if we're on the correct network
     const network = await provider.getNetwork()
-    if (network.chainId !== CHILIZ_CHAIN_ID) {
-      throw new Error(`Please switch to Chiliz Spicy Testnet (Chain ID: ${CHILIZ_CHAIN_ID})`)
+    console.log('🔗 Current network from ethers:', network.chainId, 'Expected:', CHILIZ_CHAIN_ID)
+    
+    // Accept both Chiliz mainnet (88888) and Spicy testnet (88882)
+    const validChainIds = [88888, 88882]
+    if (!validChainIds.includes(network.chainId)) {
+      throw new Error(`Please switch to Chiliz Mainnet (88888) or Spicy Testnet (88882). Current: ${network.chainId}`)
     }
 
     return new ethers.Contract(FACTORY_ADDRESS, PumpFightFactoryABI, signer)

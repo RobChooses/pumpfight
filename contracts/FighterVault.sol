@@ -397,10 +397,7 @@ contract FighterVault is Ownable, ReentrancyGuard, Pausable {
      * @dev Receive CHZ (adds to reward pool)
      */
     receive() external payable {
-        if (msg.value > 0) {
-            rewardPool = rewardPool.add(msg.value);
-            totalRevenue = totalRevenue.add(msg.value);
-            emit RevenueDistributed(msg.value);
-        }
+        // Simple receive function without complex logic
+        // Revenue distribution can be done via explicit function calls
     }
 }
