@@ -1,25 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { createPublicClient, createWalletClient, http, custom } from 'viem';
 import { chiliz, spicy } from 'viem/chains';
 import SimpleTokenLaunchpadABI from '@/lib/abis/SimpleTokenLaunchpad.json';
 import SimpleCAP20TokenABI from '@/lib/abis/SimpleCAP20Token.json';
+import { useNetwork } from './NetworkContext';
 
 // Use the existing ethereum type from window.d.ts
 
 export default function SimpleTokenCreator() {
   const { ready, authenticated, user } = usePrivy();
+  const { wallets } = useWallets();
+  const { currentChain, isTestnet } = useNetwork();
   const [tokenName, setTokenName] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [lastCreatedToken, setLastCreatedToken] = useState<string>('');
   const [mintAmount, setMintAmount] = useState('1');
   const [isMinting, setIsMinting] = useState(false);
-
-  const isTestnet = true; // For now, always use testnet
-  const currentChain = isTestnet ? spicy : chiliz;
   
   const launchpadAddress = process.env.NEXT_PUBLIC_SIMPLE_LAUNCHPAD_ADDRESS as `0x${string}`;
 
@@ -46,14 +46,24 @@ export default function SimpleTokenCreator() {
 
     setIsCreating(true);
     try {
-      // Use window.ethereum directly (which should be the connected wallet)
-      if (!window.ethereum) {
-        throw new Error('No Ethereum wallet found');
+      // Use Privy wallet provider directly
+      if (wallets.length === 0) {
+        throw new Error('No Privy wallet found');
       }
 
+      const wallet = wallets[0];
+      const provider = await wallet.getEthereumProvider();
+      
+      console.log('🔧 Creating wallet client with:', {
+        chainName: currentChain.name,
+        chainId: currentChain.id,
+        walletType: wallet.walletClientType,
+        launchpadAddress
+      });
+      
       const walletClient = createWalletClient({
         chain: currentChain,
-        transport: custom(window.ethereum),
+        transport: custom(provider),
       });
 
       const hash = await walletClient.writeContract({
@@ -121,13 +131,16 @@ export default function SimpleTokenCreator() {
 
     setIsMinting(true);
     try {
-      if (!window.ethereum) {
-        throw new Error('No Ethereum wallet found');
+      if (wallets.length === 0) {
+        throw new Error('No Privy wallet found');
       }
+
+      const wallet = wallets[0];
+      const provider = await wallet.getEthereumProvider();
       
       const walletClient = createWalletClient({
         chain: currentChain,
-        transport: custom(window.ethereum),
+        transport: custom(provider),
       });
 
       const amount = BigInt(mintAmount);
