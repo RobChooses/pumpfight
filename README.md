@@ -35,22 +35,18 @@ PumpFight is a revolutionary token launchpad specifically designed for combat sp
 ### Technology Stack
 - **Blockchain**: Chiliz Chain (88888)
 - **Smart Contracts**: Solidity 0.8.19 + OpenZeppelin
-- **Frontend**: React + Next.js + Thirdweb SDK
-- **Backend**: Node.js + Express + GraphQL
-- **Database**: PostgreSQL + Redis
-- **Oracles**: Chainlink VRF for randomness
+- **Frontend**: React + Next.js
+- **Backend**: Node.js + Express
 
 ### Core Contracts
 - `PumpFightFactory.sol` - Deploys fighter tokens
 - `FighterToken.sol` - CAP-20 token with bonding curve
 - `FighterVault.sol` - Staking and utility features
-- `VerificationRegistry.sol` - Fighter authentication
-- `AntiRugController.sol` - Protection mechanisms
 
 ## 🔗 Chiliz/Socios Integration
 
 ### Native Features
-- Socios Wallet SDK integration
+- Privy wallet integration for Socios Wallet and social logins
 - CHZ payment rails
 - Fan token synergies
 - Existing user base access
@@ -119,9 +115,9 @@ npm run dev
 NEXT_PUBLIC_CHILIZ_RPC_URL=https://rpc.chiliz.com
 NEXT_PUBLIC_CHILIZ_CHAIN_ID=88888
 NEXT_PUBLIC_SOCIOS_APP_ID=your-app-id
-NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your-client-id
-DATABASE_URL=postgresql://...
-REDIS_URL=redis://...
+NEXT_PUBLIC_PRIVY_APP_ID=
+PRIVY_SECRET=
+
 ```
 
 ## 🧪 Testing
@@ -181,7 +177,7 @@ npm run test:e2e
 
 ## 📱 Mobile App
 
-PumpFight includes a React Native mobile app for iOS and Android, optimized for fight fans on the go.
+Roadmap for PumpFight mobile includes a React Native mobile app for iOS and Android, optimized for fight fans on the go.
 
 ### Features
 - Real-time price monitoring
@@ -205,19 +201,10 @@ We welcome contributions from the community! Please read our [Contributing Guide
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🔗 Links
-
-- **Website**: [pumpfight.com](https://pumpfight.com)
-- **Documentation**: [docs.pumpfight.com](https://docs.pumpfight.com)
-- **Twitter**: [@PumpFightApp](https://twitter.com/PumpFightApp)
-- **Discord**: [Join our community](https://discord.gg/pumpfight)
-- **Telegram**: [Official channel](https://t.me/pumpfight)
-
 ## 🆘 Support
 
 - **GitHub Issues**: For bug reports and feature requests
-- **Discord**: For community support and discussions
-- **Email**: support@pumpfight.com for direct support
+
 
 ## ⚠️ Disclaimer
 
