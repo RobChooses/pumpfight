@@ -21,7 +21,11 @@
     "deploy:simple:testnet": "hardhat run scripts/deploy-simple-factory.js --network chiliz-spicy",
     "deploy:simple:mainnet": "hardhat run scripts/deploy-simple-factory.js --network chiliz-mainnet",
     "deploy:simple-launchpad:testnet": "hardhat run scripts/deploy-simple-launchpad.js --network chiliz-spicy",
-    "deploy:simple-launchpad:mainnet": "hardhat run scripts/deploy-simple-launchpad.js --network chiliz-mainnet"
+    "deploy:simple-launchpad:mainnet": "hardhat run scripts/deploy-simple-launchpad.js --network chiliz-mainnet",
+    "deploy:simple-launchpad-v2:testnet": "hardhat run scripts/deploy-simple-launchpad-v2.js --network chiliz-spicy",
+    "deploy:simple-launchpad-v2:mainnet": "hardhat run scripts/deploy-simple-launchpad-v2.js --network chiliz-mainnet",
+    "deploy:simple-launchpad-v3:testnet": "hardhat run scripts/deploy-simple-launchpad-v3.js --network chiliz-spicy",
+    "deploy:simple-launchpad-v3:mainnet": "hardhat run scripts/deploy-simple-launchpad-v3.js --network chiliz-mainnet"
   },
   "dependencies": {
     "@privy-io/react-auth": "^2.17.3",

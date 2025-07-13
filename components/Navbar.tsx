@@ -32,27 +32,27 @@ export function Navbar() {
           </div>
 
           {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-8">
-            <a 
-              href="/" 
+          <div className="hidden md:flex items-center space-x-12">
+            <a
+              href="/"
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
               Home
             </a>
-            <a 
-              href="/create" 
+            <a
+              href="/create"
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
               Create Token
             </a>
-            <a 
-              href="/simple-token" 
+            <a
+              href="/simple-token"
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
               Simple Token
             </a>
-            <a 
-              href="/tokens" 
+            <a
+              href="/tokens"
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
               Browse Tokens
@@ -62,13 +62,21 @@ export function Navbar() {
           {/* Right side - Wallet & Network Info */}
           <div className="flex items-center space-x-4">
             {/* Network Toggle - Show when authenticated */}
-            {isClient && <NetworkToggle />}
+            {isClient && (
+              <div className="px-2">
+                <NetworkToggle />
+              </div>
+            )}
 
             {/* CHZ Balance - Show when authenticated */}
-            {isClient && <CHZBalance />}
+            {isClient && (
+              <div className="px-2">
+                <CHZBalance />
+              </div>
+            )}
 
             {/* Wallet Connection */}
-            <div className="wallet-connect-wrapper">
+            <div className="wallet-connect-wrapper px-2">
               <WalletConnectButton />
             </div>
           </div>
@@ -88,8 +96,8 @@ export function Navbar() {
                 </div>
               </div>
             )}
-            
-            <div className="flex space-x-4">
+
+            <div className="flex flex-col space-y-4">
               <a href="/" className="text-gray-300 hover:text-white text-sm">Home</a>
               <a href="/create" className="text-gray-300 hover:text-white text-sm">Create</a>
               <a href="/simple-token" className="text-gray-300 hover:text-white text-sm">Simple</a>
