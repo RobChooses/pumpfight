@@ -52,7 +52,7 @@ export function Navbar() {
               Simple Token
             </a>
             <a
-              href="/tokens"
+              href="/browse-tokens"
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
               Browse Tokens
@@ -101,7 +101,7 @@ export function Navbar() {
               <a href="/" className="text-gray-300 hover:text-white text-sm">Home</a>
               <a href="/create" className="text-gray-300 hover:text-white text-sm">Create</a>
               <a href="/simple-token" className="text-gray-300 hover:text-white text-sm">Simple</a>
-              <a href="/tokens" className="text-gray-300 hover:text-white text-sm">Browse</a>
+              <a href="/browse-tokens" className="text-gray-300 hover:text-white text-sm">Browse</a>
             </div>
           </div>
         </div>
