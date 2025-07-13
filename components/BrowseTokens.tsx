@@ -58,42 +58,72 @@ export default function BrowseTokens() {
 
     for (const token of tokens) {
       try {
-        // Get bonding curve state
-        const [currentPrice, tokensSold, currentStep] = await publicClient.readContract({
-          address: token.address as `0x${string}`,
-          abi: SimpleCAP20TokenABI as any,
-          functionName: 'getBondingCurveState',
-          args: [],
-        }) as [bigint, bigint, bigint, bigint];
-
-        // Get total supply
+        console.log(`📊 Fetching data for token: ${token.name} (${token.address})`);
+        
+        // Get total supply first (most basic call)
         const totalSupply = await publicClient.readContract({
           address: token.address as `0x${string}`,
           abi: SimpleCAP20TokenABI as any,
           functionName: 'totalSupply',
           args: [],
         }) as bigint;
+        console.log(`✅ Total supply fetched: ${formatEther(totalSupply)}`);
 
-        // Get max supply
-        const maxSupply = await publicClient.readContract({
-          address: token.address as `0x${string}`,
-          abi: SimpleCAP20TokenABI as any,
-          functionName: 'MAX_SUPPLY',
-          args: [],
-        }) as bigint;
+        // Try to get bonding curve state
+        let currentPrice = BigInt(0);
+        let tokensSold = BigInt(0);
+        let currentStep = BigInt(0);
+        let maxSupply = BigInt(0);
+
+        try {
+          const bondingCurveData = await publicClient.readContract({
+            address: token.address as `0x${string}`,
+            abi: SimpleCAP20TokenABI as any,
+            functionName: 'getBondingCurveState',
+            args: [],
+          }) as [bigint, bigint, bigint, bigint];
+          
+          [currentPrice, tokensSold, currentStep] = bondingCurveData;
+          console.log(`✅ Bonding curve data fetched`);
+        } catch (bcError) {
+          console.warn(`⚠️ Bonding curve data failed for ${token.name}:`, bcError);
+        }
+
+        try {
+          maxSupply = await publicClient.readContract({
+            address: token.address as `0x${string}`,
+            abi: SimpleCAP20TokenABI as any,
+            functionName: 'MAX_SUPPLY',
+            args: [],
+          }) as bigint;
+          console.log(`✅ Max supply fetched: ${formatEther(maxSupply)}`);
+        } catch (msError) {
+          console.warn(`⚠️ Max supply failed for ${token.name}:`, msError);
+          // Set a default max supply if call fails
+          maxSupply = BigInt("1000000000000000000000000"); // 1M tokens
+        }
 
         updatedTokens.push({
           ...token,
-          currentPrice: formatEther(currentPrice),
-          tokensSold: formatEther(tokensSold),
+          currentPrice: currentPrice > 0 ? formatEther(currentPrice) : "0.001",
+          tokensSold: tokensSold > 0 ? formatEther(tokensSold) : "0",
           currentStep: currentStep.toString(),
           totalSupply: formatEther(totalSupply),
           maxSupply: formatEther(maxSupply),
         });
+        
+        console.log(`✅ Token data updated for ${token.name}`);
       } catch (error) {
-        console.error(`Error fetching info for token ${token.address}:`, error);
-        // Add token without additional info if blockchain call fails
-        updatedTokens.push(token);
+        console.error(`❌ Complete failure fetching info for token ${token.address}:`, error);
+        // Add token with fallback data if all calls fail
+        updatedTokens.push({
+          ...token,
+          currentPrice: "0.001",
+          tokensSold: "0", 
+          currentStep: "0",
+          totalSupply: "0",
+          maxSupply: "1000000",
+        });
       }
     }
 
