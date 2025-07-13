@@ -3,11 +3,6 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_verificationRegistry",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
         "name": "_platformTreasury",
         "type": "address"
       }
@@ -589,32 +584,6 @@
     "name": "updateStepSize",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "newRegistry",
-        "type": "address"
-      }
-    ],
-    "name": "updateVerificationRegistry",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "verificationRegistry",
-    "outputs": [
-      {
-        "internalType": "contract IVerificationRegistry",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   }
 ]

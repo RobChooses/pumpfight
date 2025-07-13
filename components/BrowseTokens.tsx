@@ -5,6 +5,7 @@ import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther } from 'viem';
 import { chiliz, spicy } from 'viem/chains';
 import SimpleCAP20TokenABI from '@/lib/abis/SimpleCAP20TokenV3.json';
+import FighterTokenABI from '@/lib/abis/FighterToken.json';
 import { useNetwork } from './NetworkContext';
 
 interface StoredToken {
@@ -16,6 +17,9 @@ interface StoredToken {
   transactionHash: string;
   network: string;
   chainId: number;
+  vaultAddress?: string; // For new tokens created with PumpFightFactory
+  description?: string;
+  imageUrl?: string;
 }
 
 interface TokenInfo extends StoredToken {
@@ -51,6 +55,12 @@ export default function BrowseTokens() {
     return networkTokens;
   };
 
+  // Determine which ABI to use based on token characteristics
+  const getTokenABI = (token: StoredToken) => {
+    // If token has vaultAddress, it's a new FighterToken
+    return token.vaultAddress ? FighterTokenABI : SimpleCAP20TokenABI;
+  };
+
   // Fetch additional token info from blockchain
   const fetchTokenInfo = async (tokens: StoredToken[]) => {
     setLoading(true);
@@ -59,11 +69,13 @@ export default function BrowseTokens() {
     for (const token of tokens) {
       try {
         console.log(`📊 Fetching data for token: ${token.name} (${token.address})`);
+        const tokenABI = getTokenABI(token);
+        console.log(`Using ${token.vaultAddress ? 'FighterToken' : 'SimpleCAP20'} ABI`);
         
         // Get total supply first (most basic call)
         const totalSupply = await publicClient.readContract({
           address: token.address as `0x${string}`,
-          abi: SimpleCAP20TokenABI as any,
+          abi: tokenABI as any,
           functionName: 'totalSupply',
           args: [],
         }) as bigint;
@@ -76,31 +88,63 @@ export default function BrowseTokens() {
         let maxSupply = BigInt(0);
 
         try {
-          const bondingCurveData = await publicClient.readContract({
-            address: token.address as `0x${string}`,
-            abi: SimpleCAP20TokenABI as any,
-            functionName: 'getBondingCurveState',
-            args: [],
-          }) as [bigint, bigint, bigint, bigint];
-          
-          [currentPrice, tokensSold, currentStep] = bondingCurveData;
-          console.log(`✅ Bonding curve data fetched`);
+          if (token.vaultAddress) {
+            // FighterToken: use bondingCurve getter (currentPrice, tokensSold, currentStep, reserveBalance)
+            const bondingCurveData = await publicClient.readContract({
+              address: token.address as `0x${string}`,
+              abi: tokenABI as any,
+              functionName: 'bondingCurve',
+              args: [],
+            }) as [bigint, bigint, bigint, bigint];
+            
+            [currentPrice, tokensSold, currentStep] = bondingCurveData;
+            console.log(`✅ FighterToken bonding curve data fetched:`, {
+              currentPrice: currentPrice.toString(),
+              tokensSold: tokensSold.toString(),
+              currentStep: currentStep.toString()
+            });
+          } else {
+            // SimpleCAP20Token: use getBondingCurveState
+            const bondingCurveData = await publicClient.readContract({
+              address: token.address as `0x${string}`,
+              abi: tokenABI as any,
+              functionName: 'getBondingCurveState',
+              args: [],
+            }) as [bigint, bigint, bigint, bigint];
+            
+            [currentPrice, tokensSold, currentStep] = bondingCurveData;
+            console.log(`✅ SimpleCAP20Token bonding curve data fetched`);
+          }
         } catch (bcError) {
           console.warn(`⚠️ Bonding curve data failed for ${token.name}:`, bcError);
         }
 
         try {
-          maxSupply = await publicClient.readContract({
-            address: token.address as `0x${string}`,
-            abi: SimpleCAP20TokenABI as any,
-            functionName: 'MAX_SUPPLY',
-            args: [],
-          }) as bigint;
-          console.log(`✅ Max supply fetched: ${formatEther(maxSupply)}`);
+          if (token.vaultAddress) {
+            // FighterToken: get maxSupply from config struct
+            const configData = await publicClient.readContract({
+              address: token.address as `0x${string}`,
+              abi: tokenABI as any,
+              functionName: 'config',
+              args: [],
+            }) as [bigint, bigint, bigint, bigint, bigint, bigint, bigint];
+            
+            maxSupply = configData[6]; // maxSupply is the 7th field (index 6)
+            console.log(`✅ FighterToken max supply fetched: ${formatEther(maxSupply)}`);
+          } else {
+            // SimpleCAP20Token: use MAX_SUPPLY
+            maxSupply = await publicClient.readContract({
+              address: token.address as `0x${string}`,
+              abi: tokenABI as any,
+              functionName: 'MAX_SUPPLY',
+              args: [],
+            }) as bigint;
+            console.log(`✅ SimpleCAP20Token max supply fetched: ${formatEther(maxSupply)}`);
+          }
         } catch (msError) {
           console.warn(`⚠️ Max supply failed for ${token.name}:`, msError);
           // Set a default max supply if call fails
-          maxSupply = BigInt("1000000000000000000000000"); // 1M tokens
+          maxSupply = BigInt("10000000000000000000000000"); // 10M tokens
         }
 
         updatedTokens.push({
@@ -138,7 +182,13 @@ export default function BrowseTokens() {
       return;
     }
 
-    const amount = prompt(`How many ${tokenName} tokens would you like to buy?`, '1');
+    // Different prompts for different token types
+    const tokenInfo = tokens.find(t => t.address === tokenAddress);
+    const isFighterToken = tokenInfo?.vaultAddress ? true : false;
+    
+    const amount = isFighterToken 
+      ? prompt(`How much CHZ would you like to spend on ${tokenName}?`, '1')
+      : prompt(`How many ${tokenName} tokens would you like to buy?`, '1');
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       return;
     }
@@ -158,34 +208,78 @@ export default function BrowseTokens() {
         transport: custom(provider),
       });
 
-      // Calculate cost for the tokens
-      const tokenAmount = parseEther(amount);
-      const cost = await publicClient.readContract({
-        address: tokenAddress as `0x${string}`,
-        abi: SimpleCAP20TokenABI as any,
-        functionName: 'calculateCHZFromTokens',
-        args: [tokenAmount],
-      }) as bigint;
+      // Find the token info to determine which ABI to use
+      const tokenInfo = tokens.find(t => t.address === tokenAddress);
+      const tokenABI = tokenInfo ? getTokenABI(tokenInfo) : SimpleCAP20TokenABI;
+      const isFighterToken = tokenInfo?.vaultAddress ? true : false;
 
-      const costInCHZ = formatEther(cost);
-      const confirmPurchase = confirm(`Buy ${amount} tokens for ${parseFloat(costInCHZ).toFixed(6)} CHZ?`);
+      let hash;
+      let tokensBought = '';
       
-      if (!confirmPurchase) {
-        setBuyingToken(null);
-        return;
+      if (isFighterToken) {
+        // FighterToken: user specifies CHZ amount, gets tokens calculated
+        const chzAmount = parseEther(amount); // amount is CHZ to spend
+        
+        // Calculate expected tokens from CHZ
+        const expectedTokens = await publicClient.readContract({
+          address: tokenAddress as `0x${string}`,
+          abi: tokenABI as any,
+          functionName: 'calculateTokensFromCHZ',
+          args: [chzAmount],
+        }) as bigint;
+        
+        const tokensOut = formatEther(expectedTokens);
+        tokensBought = parseFloat(tokensOut).toFixed(3);
+        
+        const confirmPurchase = confirm(`Spend ${amount} CHZ to buy ${tokensBought} tokens?`);
+        
+        if (!confirmPurchase) {
+          setBuyingToken(null);
+          return;
+        }
+
+        // Use buy() function with slippage protection (95% of expected)
+        const minTokensOut = expectedTokens * BigInt(95) / BigInt(100);
+        hash = await walletClient.writeContract({
+          address: tokenAddress as `0x${string}`,
+          abi: tokenABI as any,
+          functionName: 'buy',
+          args: [minTokensOut],
+          value: chzAmount,
+          account: user.wallet.address as `0x${string}`,
+        });
+      } else {
+        // SimpleCAP20Token: user specifies token amount, pays calculated CHZ
+        const tokenAmount = parseEther(amount);
+        tokensBought = amount; // For SimpleCAP20, amount is already the token amount
+        
+        const cost = await publicClient.readContract({
+          address: tokenAddress as `0x${string}`,
+          abi: tokenABI as any,
+          functionName: 'calculateCHZFromTokens',
+          args: [tokenAmount],
+        }) as bigint;
+
+        const costInCHZ = formatEther(cost);
+        const confirmPurchase = confirm(`Buy ${amount} tokens for ${parseFloat(costInCHZ).toFixed(6)} CHZ?`);
+        
+        if (!confirmPurchase) {
+          setBuyingToken(null);
+          return;
+        }
+
+        hash = await walletClient.writeContract({
+          address: tokenAddress as `0x${string}`,
+          abi: tokenABI as any,
+          functionName: 'mint',
+          args: [tokenAmount],
+          value: cost,
+          account: user.wallet.address as `0x${string}`,
+        });
       }
 
-      const hash = await walletClient.writeContract({
-        address: tokenAddress as `0x${string}`,
-        abi: SimpleCAP20TokenABI as any,
-        functionName: 'mint',
-        args: [tokenAmount],
-        value: cost,
-        account: user.wallet.address as `0x${string}`,
-      });
-
       await publicClient.waitForTransactionReceipt({ hash });
-      alert(`Successfully bought ${amount} tokens!\nTransaction: ${hash}`);
+      alert(`Successfully bought ${tokensBought} tokens!\nTransaction: ${hash}`);
       
       // Refresh token info after successful purchase
       const storedTokens = loadTokens();
@@ -284,10 +378,31 @@ export default function BrowseTokens() {
                 <div>
                   <h3 className="text-lg font-bold text-white">{token.name}</h3>
                   <p className="text-fight-gold font-medium">{token.symbol}</p>
+                  {/* Show special badge for FighterTokens with staking/voting */}
+                  {token.vaultAddress && (
+                    <span className="inline-flex items-center px-2 py-1 bg-gradient-to-r from-meme-purple to-social-blue text-white text-xs font-bold rounded-full mt-1">
+                      🥇 Staking & Voting
+                    </span>
+                  )}
                 </div>
-                <span className="px-3 py-1 bg-gradient-to-r from-energy-green to-fight-gold text-black text-xs font-bold rounded-full">
-                  Step {token.currentStep || '?'}
-                </span>
+                <div className="text-right">
+                  <span className="px-3 py-1 bg-gradient-to-r from-energy-green to-fight-gold text-black text-xs font-bold rounded-full block text-center">
+                    Step {token.currentStep !== undefined ? (parseInt(token.currentStep) + 1) : '?'}
+                  </span>
+                  {token.tokensSold && token.currentStep !== undefined && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      {(() => {
+                        const sold = parseFloat(token.tokensSold);
+                        const step = parseInt(token.currentStep);
+                        const stepSize = 50000; // 50k tokens per step
+                        const progressInCurrentStep = sold - (step * stepSize);
+                        const progressPercent = Math.min((progressInCurrentStep / stepSize) * 100, 100);
+                        return `${progressPercent.toFixed(1)}% to Step ${step + 2}`;
+                      })()
+                    }
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-3 text-sm">
@@ -341,37 +456,57 @@ export default function BrowseTokens() {
                     {token.creator}
                   </p>
                 </div>
+
+                {/* Show vault address for FighterTokens */}
+                {token.vaultAddress && (
+                  <div>
+                    <span className="font-medium text-gray-300">Vault Address:</span>
+                    <p className="font-mono text-xs break-all text-gray-400 mt-1">
+                      {token.vaultAddress}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 pt-4 border-t border-gray-700">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  {/* Buy Button - only show if max supply not reached */}
-                  {token.totalSupply && token.maxSupply && 
-                   parseFloat(token.totalSupply) < parseFloat(token.maxSupply) && (
-                    <button
-                      onClick={() => buyTokens(token.address, token.name)}
-                      disabled={buyingToken === token.address || !authenticated}
-                      className="flex-1 px-4 py-2 bg-gradient-to-r from-fight-gold to-energy-green text-black font-bold rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Buy Button - only show if max supply not reached */}
+                    {token.totalSupply && token.maxSupply && 
+                     parseFloat(token.totalSupply) < parseFloat(token.maxSupply) && (
+                      <button
+                        onClick={() => buyTokens(token.address, token.name)}
+                        disabled={buyingToken === token.address || !authenticated}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-fight-gold to-energy-green text-black font-bold rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {buyingToken === token.address ? (
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                            Buying...
+                          </div>
+                        ) : (
+                          '💰 Buy Coins'
+                        )}
+                      </button>
+                    )}
+                    
+                    {/* Explorer Link */}
+                    <a
+                      href={`https://${currentChain.id === 88882 ? 'spicy-explorer' : 'explorer'}.chiliz.com/address/${token.address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-electric-orange to-neon-pink text-white font-bold rounded-lg hover:opacity-90 transition-opacity text-sm"
                     >
-                      {buyingToken === token.address ? (
-                        <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                          Buying...
-                        </div>
-                      ) : (
-                        '💰 Buy Tokens'
-                      )}
-                    </button>
-                  )}
+                      🔍 Explorer
+                    </a>
+                  </div>
                   
-                  {/* Explorer Link */}
+                  {/* Token Detail Page Link - different text based on capabilities */}
                   <a
-                    href={`https://${currentChain.id === 88882 ? 'spicy-explorer' : 'explorer'}.chiliz.com/address/${token.address}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-electric-orange to-neon-pink text-white font-bold rounded-lg hover:opacity-90 transition-opacity text-sm"
+                    href={`/token/${token.address}`}
+                    className="w-full px-4 py-2 bg-gradient-to-r from-meme-purple to-social-blue text-white font-bold rounded-lg hover:opacity-90 transition-opacity text-sm text-center"
                   >
-                    🔍 Explorer
+                    {token.vaultAddress ? '📊 View Details • Stake • Vote' : '📊 View Details'}
                   </a>
                 </div>
               </div>
