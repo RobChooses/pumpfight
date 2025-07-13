@@ -2,19 +2,19 @@ import SimpleTokenCreator from '@/components/SimpleTokenCreator';
 
 export default function SimpleTokenPage() {
   return (
-    <div className="min-h-screen bg-dark-bg">
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+      <div className="w-full max-w-4xl px-4 sm:px-6 lg:px-8">
+        {/* Main Content */}
         <div className="bg-card-dark border border-gray-700 rounded-2xl p-8 shadow-2xl">
-          <div className="mb-8">
+          <div className="mb-8 text-center">
             <h1 className="text-3xl font-black text-white mb-4">
-              <span className="text-fight-gold">SIMPLE</span> TOKEN LAUNCHPAD
+              <span className="text-fight-gold">LAUNCH</span> COIN
             </h1>
             <h2 className="text-xl font-bold text-gray-300 mb-4">
-              🚀 Create Your Token with Bonding Curve
+              🚀 Create Your Coin with Bonding Curve
             </h2>
             <p className="text-gray-300 text-lg">
-              Launch CAP-20 tokens with automatic bonding curve pricing. Perfect for creators, communities, and projects.
+              Launch CAP-20 tokens with automatic bonding curve pricing. Perfect for fighters, athletes and sports players.
             </p>
           </div>
 
@@ -22,7 +22,7 @@ export default function SimpleTokenPage() {
         </div>
 
         {/* Info Section */}
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
           <div className="bg-card-dark border border-gray-700 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-3">📋 Features</h3>
             <ul className="text-gray-300 space-y-2">
@@ -45,7 +45,7 @@ export default function SimpleTokenPage() {
             </ul>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

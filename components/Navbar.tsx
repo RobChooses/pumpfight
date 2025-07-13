@@ -32,32 +32,34 @@ export function Navbar() {
           </div>
 
           {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-12">
-            <a
-              href="/"
-              className="text-gray-300 hover:text-white transition-colors font-medium"
-            >
-              Home
-            </a>
-            <a
-              href="/create"
-              className="text-gray-300 hover:text-white transition-colors font-medium"
-            >
-              Create Token
-            </a>
-            <a
-              href="/simple-token"
-              className="text-gray-300 hover:text-white transition-colors font-medium"
-            >
-              Simple Token
-            </a>
-            <a
-              href="/browse-tokens"
-              className="text-gray-300 hover:text-white transition-colors font-medium"
-            >
-              Browse Tokens
-            </a>
-          </div>
+          <nav className="hidden md:block">
+            <ul className="flex items-center space-x-12">
+              <li>
+                <a
+                  href="/"
+                  className="text-gray-300 hover:text-white transition-colors font-medium px-4 py-2"
+                >
+                  Home&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/simple-token"
+                  className="text-gray-300 hover:text-white transition-colors font-medium px-4 py-2"
+                >
+                  Launch Coin&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/browse-tokens"
+                  className="text-gray-300 hover:text-white transition-colors font-medium px-4 py-2"
+                >
+                  Browse Coins
+                </a>
+              </li>
+            </ul>
+          </nav>
 
           {/* Right side - Wallet & Network Info */}
           <div className="flex items-center space-x-4">
@@ -99,9 +101,8 @@ export function Navbar() {
 
             <div className="flex flex-col space-y-4">
               <a href="/" className="text-gray-300 hover:text-white text-sm">Home</a>
-              <a href="/create" className="text-gray-300 hover:text-white text-sm">Create</a>
-              <a href="/simple-token" className="text-gray-300 hover:text-white text-sm">Simple</a>
-              <a href="/browse-tokens" className="text-gray-300 hover:text-white text-sm">Browse</a>
+              <a href="/simple-token" className="text-gray-300 hover:text-white text-sm">Simple Token</a>
+              <a href="/browse-tokens" className="text-gray-300 hover:text-white text-sm">Browse Tokens</a>
             </div>
           </div>
         </div>

@@ -135,7 +135,7 @@ export default function SimpleTokenCreator() {
     setIsCreating(true);
     try {
       // Find the wallet that matches the authenticated user's wallet
-      const userWallet = wallets.find(w => w.address === user.wallet.address);
+      const userWallet = wallets.find(w => w.address === user?.wallet?.address);
       if (!userWallet) {
         throw new Error('Authenticated wallet not found in Privy wallets');
       }
@@ -265,7 +265,7 @@ export default function SimpleTokenCreator() {
     setIsMinting(true);
     try {
       // Find the wallet that matches the authenticated user's wallet
-      const userWallet = wallets.find(w => w.address === user.wallet.address);
+      const userWallet = wallets.find(w => w.address === user?.wallet?.address);
       if (!userWallet) {
         throw new Error('Authenticated wallet not found in Privy wallets');
       }
